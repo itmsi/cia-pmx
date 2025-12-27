@@ -26,14 +26,15 @@ class UserModel extends Model
         'last_login_at'
     ];
     
-    protected array $casts = [
-        'status' => 'string'
-    ];
-
     protected bool $allowEmptyInserts = false;
     protected bool $updateOnlyChanged = true;
 
-    protected array $casts = [];
+    protected array $casts = [
+        'status' => 'string',
+        'role_id' => 'int',
+        'force_logout_at' => 'datetime',
+        'last_login_at' => 'datetime'
+    ];
     protected array $castHandlers = [];
 
     // Dates
