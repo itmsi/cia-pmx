@@ -106,16 +106,13 @@
                     </label>
                     <select name="assignee_id" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
                         <option value="">Unassigned</option>
-                        <!-- Users akan di-populate via project users -->
-                        <?php
-                        $projectService = new \App\Services\ProjectService();
-                        $projectUsers = $projectService->getProjectUsers($project['id']);
-                        foreach ($projectUsers as $user):
-                        ?>
-                            <option value="<?= $user['id'] ?>" <?= old('assignee_id', $issue['assignee_id']) == $user['id'] ? 'selected' : '' ?>>
-                                <?= esc($user['full_name'] ?? $user['email']) ?>
-                            </option>
-                        <?php endforeach; ?>
+                        <?php if (!empty($projectUsers)): ?>
+                            <?php foreach ($projectUsers as $user): ?>
+                                <option value="<?= $user['id'] ?>" <?= old('assignee_id', $issue['assignee_id']) == $user['id'] ? 'selected' : '' ?>>
+                                    <?= esc($user['full_name'] ?? $user['email']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                     </select>
                 </div>
 

@@ -74,11 +74,13 @@ class IssueController extends BaseController
         }
 
         $labels = $this->labelService->getLabelsByProject((int)$projectId);
+        $projectUsers = $this->projectService->getProjectUsers((int)$projectId);
 
         return view('issues/create', [
             'project' => $project,
             'columns' => $columns,
-            'labels' => $labels
+            'labels' => $labels,
+            'projectUsers' => $projectUsers
         ]);
     }
 
@@ -220,12 +222,15 @@ class IssueController extends BaseController
                 ->getResultArray();
         }
 
+        $projectUsers = $this->projectService->getProjectUsers($issue['project_id']);
+
         return view('issues/edit', [
             'issue' => $issue,
             'project' => $project,
             'labels' => $labels,
             'issueLabels' => $issueLabels,
-            'columns' => $columns
+            'columns' => $columns,
+            'projectUsers' => $projectUsers
         ]);
     }
 

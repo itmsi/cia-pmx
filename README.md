@@ -159,8 +159,3 @@ Activity logs were added early to support debugging and accountability.
 - UI/UX improvements
 
 ---
-
-## 👤 Author
-
-Built by **Mochamad Fadlan Abdillah**  
-System Analyst / Backend Engineer

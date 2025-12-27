@@ -87,6 +87,14 @@
             padding: 8px 12px;
             border-radius: 4px;
             transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+
+        .nav-link i {
+            font-size: 0.9rem;
         }
 
         .nav-link:hover {
@@ -160,16 +168,39 @@
             }
 
             .nav-links {
-                gap: 10px;
+                gap: 8px;
+                flex-wrap: wrap;
             }
 
             .nav-link {
                 padding: 6px 10px;
-                font-size: 0.9rem;
+                font-size: 0.85rem;
+            }
+
+            .nav-link {
+                font-size: 0.8rem;
+            }
+
+            .nav-link i {
+                font-size: 1rem;
             }
 
             main {
                 padding: 20px 15px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .logo span:last-child {
+                display: none; /* Hide logo text on very small screens */
+            }
+
+            .nav-links {
+                gap: 5px;
+            }
+
+            .user-email {
+                display: none; /* Hide email on mobile */
             }
         }
     </style>
@@ -187,13 +218,32 @@
 
             <nav class="nav-links">
                 <?php if (session()->get('user_id')): ?>
-                    <a href="/boards" class="nav-link <?= current_url() === base_url('boards') ? 'active' : '' ?>">My Boards</a>
-                <?php endif; ?>
-            </nav>
-
-            <nav class="nav-links">
-                <?php if (session()->get('user_id')): ?>
-                    <a href="/activity-logs" class="nav-link <?= current_url() === base_url('activity-logs') ? 'active' : '' ?>">Activity</a>
+                    <a href="/projects" class="nav-link <?= strpos(current_url(), base_url('projects')) !== false ? 'active' : '' ?>">
+                        <i class="fas fa-folder"></i> Projects
+                    </a>
+                    <a href="/workspaces" class="nav-link <?= strpos(current_url(), base_url('workspaces')) !== false ? 'active' : '' ?>">
+                        <i class="fas fa-building"></i> Workspaces
+                    </a>
+                    <a href="/boards" class="nav-link <?= strpos(current_url(), base_url('boards')) !== false ? 'active' : '' ?>">
+                        <i class="fas fa-columns"></i> Boards
+                    </a>
+                    <a href="/activity-logs" class="nav-link <?= strpos(current_url(), base_url('activity-logs')) !== false ? 'active' : '' ?>">
+                        <i class="fas fa-history"></i> Activity
+                    </a>
+                    <?php
+                    // Check if user is admin (role_id = 1 or role slug = 'admin')
+                    // For now, we'll show Roles & Permissions if role_id exists and is 1
+                    // This can be enhanced later with proper permission checking
+                    $userRoleId = session()->get('role_id');
+                    if ($userRoleId == 1): // Assuming role_id 1 is Admin
+                    ?>
+                        <a href="/roles" class="nav-link <?= strpos(current_url(), base_url('roles')) !== false ? 'active' : '' ?>">
+                            <i class="fas fa-user-shield"></i> Roles
+                        </a>
+                        <a href="/permissions" class="nav-link <?= strpos(current_url(), base_url('permissions')) !== false ? 'active' : '' ?>">
+                            <i class="fas fa-key"></i> Permissions
+                        </a>
+                    <?php endif; ?>
                 <?php endif; ?>
             </nav>
 
