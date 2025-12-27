@@ -11,8 +11,18 @@ $routes->get('/', 'ProjectController::index', ['filter' => 'auth']);
 $routes->group('', ['filter' => 'auth'], function($routes) {
     
     // ========================================
-    // MASTER DATA - Roles & Permissions
+    // MASTER DATA - Users, Roles & Permissions
     // ========================================
+    $routes->group('users', function($routes) {
+        $routes->get('/', 'UserController::index');
+        $routes->get('create', 'UserController::create');
+        $routes->post('/', 'UserController::store');
+        $routes->get('(:num)', 'UserController::show/$1');
+        $routes->get('(:num)/edit', 'UserController::edit/$1');
+        $routes->post('(:num)', 'UserController::update/$1');
+        $routes->post('(:num)/delete', 'UserController::delete/$1');
+    });
+
     $routes->group('roles', function($routes) {
         $routes->get('/', 'RoleController::index');
         $routes->get('create', 'RoleController::create');
@@ -97,6 +107,16 @@ $routes->group('', ['filter' => 'auth'], function($routes) {
         $routes->post('(:num)', 'CommentController::update/$1');
         $routes->post('(:num)/delete', 'CommentController::delete/$1');
         $routes->get('issue/(:num)', 'CommentController::getByIssue/$1');
+    });
+
+    // ========================================
+    // ATTACHMENTS
+    // ========================================
+    $routes->group('attachments', function($routes) {
+        $routes->post('/', 'AttachmentController::store');
+        $routes->get('(:num)/download', 'AttachmentController::download/$1');
+        $routes->post('(:num)/delete', 'AttachmentController::delete/$1');
+        $routes->get('issue/(:num)', 'AttachmentController::getByIssue/$1');
     });
 
     // ========================================

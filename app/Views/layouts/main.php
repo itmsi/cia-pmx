@@ -232,11 +232,14 @@
                     </a>
                     <?php
                     // Check if user is admin (role_id = 1 or role slug = 'admin')
-                    // For now, we'll show Roles & Permissions if role_id exists and is 1
+                    // For now, we'll show Users, Roles & Permissions if role_id exists and is 1
                     // This can be enhanced later with proper permission checking
                     $userRoleId = session()->get('role_id');
                     if ($userRoleId == 1): // Assuming role_id 1 is Admin
                     ?>
+                        <a href="/users" class="nav-link <?= strpos(current_url(), base_url('users')) !== false ? 'active' : '' ?>">
+                            <i class="fas fa-users"></i> Users
+                        </a>
                         <a href="/roles" class="nav-link <?= strpos(current_url(), base_url('roles')) !== false ? 'active' : '' ?>">
                             <i class="fas fa-user-shield"></i> Roles
                         </a>

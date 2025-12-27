@@ -6,18 +6,21 @@ use App\Controllers\BaseController;
 use App\Services\IssueService;
 use App\Services\ProjectService;
 use App\Services\LabelService;
+use App\Services\AttachmentService;
 
 class IssueController extends BaseController
 {
     protected IssueService $issueService;
     protected ProjectService $projectService;
     protected LabelService $labelService;
+    protected AttachmentService $attachmentService;
 
     public function __construct()
     {
         $this->issueService = new IssueService();
         $this->projectService = new ProjectService();
         $this->labelService = new LabelService();
+        $this->attachmentService = new AttachmentService();
     }
 
     /**
@@ -175,12 +178,16 @@ class IssueController extends BaseController
         $commentService = new \App\Services\CommentService();
         $comments = $commentService->getCommentsByIssue((int)$id);
 
+        // Get attachments
+        $attachments = $this->attachmentService->getAttachmentsByIssue((int)$id);
+
         return view('issues/show', [
             'issue' => $issue,
             'project' => $project,
             'labels' => $labels,
             'subTasks' => $subTasks,
-            'comments' => $comments
+            'comments' => $comments,
+            'attachments' => $attachments
         ]);
     }
 

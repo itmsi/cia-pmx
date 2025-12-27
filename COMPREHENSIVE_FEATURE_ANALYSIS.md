@@ -12,29 +12,34 @@
 #### 1. User Management
 - [x] **CRUD User** ✅ **SUDAH ADA**
   - ✅ Model: `UserModel.php`
-  - ✅ Service: `AuthService.php`
-  - ✅ Controller: `AuthController.php` (register, login)
-  - ⏳ CRUD User management page (belum ada controller khusus)
+  - ✅ Service: `UserService.php` (NEW - Complete CRUD)
+  - ✅ Controller: `UserController.php` (NEW - Complete CRUD)
+  - ✅ Views: index, create, show, edit (4 views)
+  - ✅ Routes: All CRUD routes configured
 
 - [x] **Status user (active / inactive)** ✅ **SUDAH ADA**
   - ✅ Migration: `EnhanceUsersTableWithRolesAndProfile.php`
   - ✅ Field: `status` (active/inactive)
+  - ✅ Form fields di create/edit
 
 - [x] **Role user (Admin, PM, Developer, QA, Viewer)** ✅ **SUDAH ADA**
   - ✅ Migration: `EnhanceUsersTableWithRolesAndProfile.php`
   - ✅ Field: `role_id` dengan relationship ke roles table
   - ✅ Seeders: RolesSeeder dengan 5 roles
+  - ✅ Dropdown di create/edit forms
 
 - [x] **Assign user ke multiple project** ✅ **SUDAH ADA**
   - ✅ Migration: `CreateProjectUsersTable.php`
   - ✅ Service: `ProjectService::addUserToProject()`
   - ✅ Controller: `ProjectController::addUser()`
+  - ✅ Display di user show page
 
 - [x] **Foto profil & informasi kontak** ✅ **SUDAH ADA**
   - ✅ Migration: `EnhanceUsersTableWithRolesAndProfile.php`
   - ✅ Fields: `photo`, `phone`, `full_name`
+  - ✅ Form fields di create/edit
 
-**Status: 95% Complete** ✅ (kurang CRUD User management page)
+**Status: 100% Complete** ✅ (User Management page sudah dibuat)
 
 ---
 
@@ -129,11 +134,23 @@
 - [x] **Multiple board dalam satu project** ✅ **SUDAH ADA**
   - ✅ Relationship: boards.project_id → projects.id
 
-- [ ] **Board permission (siapa bisa edit / view)** ❌ **BELUM ADA**
-  - ⏳ Belum ada table untuk board_permissions
-  - ⏳ Belum ada service/controller untuk manage permissions
+- [x] **Board permission (siapa bisa edit / view)** ✅ **SUDAH ADA**
+  - ✅ Migration: `CreateBoardPermissionsTable.php`
+  - ✅ Table: `board_permissions` dengan fields (board_id, user_id, can_view, can_edit)
+  - ✅ Service: `BoardService` dengan methods:
+    - `userCanViewBoard()` - Check view permission
+    - `userCanEditBoard()` - Check edit permission
+    - `addUserPermission()` - Add permission untuk user
+    - `removeUserPermission()` - Remove permission
+    - `getBoardPermissions()` - Get all permissions untuk board
+    - `getBoardsAccessibleByUser()` - Get boards yang bisa diakses user
+  - ✅ Controller: `BoardController` dengan methods:
+    - `showPermissions()` - Show permissions page
+    - `addPermission()` - Add user permission
+    - `removePermission()` - Remove user permission
+  - ✅ Permission checking di semua board operations (show, edit, update, delete)
 
-**Status: 75% Complete** ⏳ (kurang board permissions)
+**Status: 100% Complete** ✅
 
 ---
 
@@ -181,12 +198,30 @@
   - ✅ Controller: `LabelController.php`
   - ✅ Junction table: `issue_labels`
 
-- [ ] **Attachment (file, image, pdf)** ❌ **BELUM ADA**
-  - ⏳ Belum ada table untuk attachments
-  - ⏳ Belum ada service/controller untuk file upload
-  - ⏳ Belum ada file storage system
+- [x] **Attachment (file, image, pdf)** ✅ **SUDAH ADA**
+  - ✅ Migration: `CreateAttachmentsTable.php`
+  - ✅ Table: `attachments` dengan fields:
+    - issue_id, user_id, original_name, file_name, file_path
+    - file_size, mime_type, file_type, description
+  - ✅ Model: `AttachmentModel.php`
+  - ✅ Service: `AttachmentService.php` dengan methods:
+    - `uploadAttachment()` - Upload file dengan validasi (max 10MB)
+    - `getAttachmentsByIssue()` - Get semua attachments untuk issue
+    - `getAttachmentById()` - Get attachment by ID
+    - `deleteAttachment()` - Delete attachment (termasuk file fisik)
+    - `getFileContent()` - Get file untuk download
+    - `getAttachmentCount()` - Count attachments untuk issue
+  - ✅ Controller: `AttachmentController.php` dengan methods:
+    - `store()` - Upload attachment
+    - `download()` - Download attachment
+    - `delete()` - Delete attachment
+    - `getByIssue()` - Get attachments untuk issue (AJAX)
+  - ✅ Routes: `/attachments` dengan CRUD operations
+  - ✅ File storage: Local folder `writable/uploads/attachments/`
+  - ✅ File types: image, document, pdf, other
+  - ✅ Integration: Attachments ditampilkan di issue show page
 
-**Status: 90% Complete** ⏳ (kurang file attachments)
+**Status: 100% Complete** ✅
 
 ---
 
@@ -262,7 +297,7 @@
   - ⏳ Belum ada WebSocket implementation
   - ⏳ Belum ada realtime update
 
-**Status: 75% Complete** ⏳ (kurang WebSocket/realtime)
+**Status: 100% Complete** ⏳ (kurang WebSocket/realtime tidak perlu socket)
 
 ---
 
@@ -303,7 +338,7 @@
   - ⏳ Mention
   - ⏳ Due date reminder
 
-**Status: 0% Complete** ❌
+**Status: 0% Complete** ❌ (masih belum diperlukan)
 
 ---
 
@@ -408,7 +443,7 @@
 
 - [ ] **2FA (optional)** ❌ **BELUM ADA**
 
-**Status: 33% Complete** ⏳ (hanya session-based login)
+**Status: 33% Complete** ⏳ (hanya session-based login) skip paai session saja dulu
 
 ---
 
@@ -421,10 +456,13 @@
   - ✅ ProjectService::userHasAccess()
   - ✅ Visibility checking (private/workspace/public)
 
-- [ ] **Board-level permission** ❌ **BELUM ADA**
-  - ⏳ Belum ada board permission system
+- [x] **Board-level permission** ✅ **SUDAH ADA**
+  - ✅ BoardService::userCanViewBoard()
+  - ✅ BoardService::userCanEditBoard()
+  - ✅ Board permissions table dengan can_view dan can_edit flags
+  - ✅ Permission management di BoardController
 
-**Status: 67% Complete** ⏳ (kurang board-level)
+**Status: 100% Complete** ✅
 
 ---
 
@@ -433,11 +471,11 @@
   - ✅ Field: `last_login_at`, `last_activity_at` di users table
   - ⏳ Perlu enhancement untuk detailed login history table
 
-- [ ] **IP logging** ❌ **BELUM ADA**
+- [ ] **IP logging** ❌ **BELUM ADA** skip
 
 - [ ] **Force logout** ❌ **BELUM ADA**
 
-**Status: 33% Complete** ⏳
+**Status: 33% Complete** ⏳ force logout yg di butuhkan
 
 ---
 
@@ -452,7 +490,7 @@
 
 - [ ] **REST API / GraphQL** ❌ **BELUM ADA**
 
-**Status: 0% Complete** ❌
+**Status: 0% Complete** ❌ skip dulu masih belum di butuhkan
 
 ---
 
@@ -463,7 +501,7 @@
 
 - [ ] **Scheduled job** ❌ **BELUM ADA**
 
-**Status: 0% Complete** ❌
+**Status: 0% Complete** ❌ skip tidak perlu
 
 ---
 
@@ -473,28 +511,28 @@
 
 | Kategori | Total Fitur | Sudah Ada | Belum Ada | Progress |
 |----------|-------------|-----------|-----------|----------|
-| **Master Data** | 3 | 3 | 0 | 100% ✅ |
-| **Project Management** | 2 | 1.75 | 0.25 | 88% ⏳ |
-| **Issue Management** | 2 | 1.5 | 0.5 | 75% ⏳ |
+| **Master Data** | 3 | 3 | 0 | **100%** ✅ |
+| **Project Management** | 2 | 2 | 0 | **100%** ✅ |
+| **Issue Management** | 2 | 2 | 0 | **100%** ✅ |
 | **Sprint & Scrum** | 2 | 0 | 2 | 0% ❌ |
 | **Collaboration** | 3 | 1.75 | 1.25 | 58% ⏳ |
 | **File & Documentation** | 2 | 0 | 2 | 0% ❌ |
 | **Reporting** | 2 | 0 | 2 | 0% ❌ |
 | **Search & Filter** | 1 | 0.8 | 0.2 | 80% ⏳ |
-| **System & Security** | 3 | 1 | 2 | 33% ⏳ |
+| **System & Security** | 3 | 1.67 | 1.33 | 56% ⏳ |
 | **Integration** | 2 | 0 | 2 | 0% ❌ |
-| **TOTAL** | **22** | **10.8** | **11.2** | **49%** ⏳ |
+| **TOTAL** | **22** | **11.55** | **10.45** | **53%** ⏳ |
 
 ---
 
 ## ✅ FITUR YANG SUDAH ADA (100% atau sebagian besar)
 
-1. ✅ **User Management** (95%)
+1. ✅ **User Management** (100%)
 2. ✅ **Role & Permission** (100%)
 3. ✅ **Workspace/Organization** (100%)
 4. ✅ **Project Management** (100%)
-5. ✅ **Board Management** (75% - kurang permissions)
-6. ✅ **Issue/Task CRUD** (90% - kurang file attachments)
+5. ✅ **Board Management** (100%)
+6. ✅ **Issue/Task CRUD** (100%)
 7. ✅ **Labels/Tags** (100%)
 8. ✅ **Comments** (75% - kurang realtime)
 9. ✅ **Activity Logs** (100%)
@@ -505,9 +543,7 @@
 ## ❌ FITUR YANG BELUM ADA
 
 ### Priority 1 (Core MVP):
-1. ❌ **File Attachments** untuk Issues
-2. ❌ **Workflow Validation** untuk drag-drop
-3. ❌ **Board Permissions**
+1. ❌ **Workflow Validation** untuk drag-drop
 
 ### Priority 2 (Enhanced Features):
 4. ❌ **Sprint & Scrum** (semua fitur)
