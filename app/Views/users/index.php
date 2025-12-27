@@ -84,6 +84,14 @@
                                 <a href="/users/<?= $user['id'] ?>/edit" class="btn btn-outline" style="padding: 6px 12px; font-size: 0.85rem;">
                                     Edit
                                 </a>
+                                <?php if ($user['id'] != session()->get('user_id')): ?>
+                                <form method="post" action="/users/<?= $user['id'] ?>/force-logout" style="display: inline;" onsubmit="return confirm('Are you sure you want to force logout this user? They will be logged out on their next request.')">
+                                    <?= csrf_field() ?>
+                                    <button type="submit" class="btn btn-outline" style="padding: 6px 12px; font-size: 0.85rem; color: #f57c00; border-color: #f57c00;" title="Force logout user">
+                                        <i class="fas fa-sign-out-alt"></i> Force Logout
+                                    </button>
+                                </form>
+                                <?php endif; ?>
                                 <form method="post" action="/users/<?= $user['id'] ?>/delete" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this user?')">
                                     <?= csrf_field() ?>
                                     <button type="submit" class="btn btn-outline" style="padding: 6px 12px; font-size: 0.85rem; color: #d32f2f; border-color: #d32f2f;">

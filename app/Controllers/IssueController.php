@@ -7,6 +7,7 @@ use App\Services\IssueService;
 use App\Services\ProjectService;
 use App\Services\LabelService;
 use App\Services\AttachmentService;
+use App\Services\SavedFilterService;
 
 class IssueController extends BaseController
 {
@@ -14,6 +15,7 @@ class IssueController extends BaseController
     protected ProjectService $projectService;
     protected LabelService $labelService;
     protected AttachmentService $attachmentService;
+    protected SavedFilterService $savedFilterService;
 
     public function __construct()
     {
@@ -21,6 +23,7 @@ class IssueController extends BaseController
         $this->projectService = new ProjectService();
         $this->labelService = new LabelService();
         $this->attachmentService = new AttachmentService();
+        $this->savedFilterService = new SavedFilterService();
     }
 
     /**
@@ -32,13 +35,81 @@ class IssueController extends BaseController
         $userId = session()->get('user_id');
         $projectId = $this->request->getGet('project_id');
         
-        $issues = $projectId 
-            ? $this->issueService->getIssuesByProject((int)$projectId)
-            : $this->issueService->getIssuesForUser($userId);
+        // Get filter parameters from query string
+        $filters = [
+            'project_id' => $projectId ? (int)$projectId : null,
+            'column_id' => $this->request->getGet('column_id'),
+            'priority' => $this->request->getGet('priority'),
+            'assignee_id' => $this->request->getGet('assignee_id'),
+            'label_id' => $this->request->getGet('label_id'),
+            'issue_type' => $this->request->getGet('issue_type'),
+            'due_date_from' => $this->request->getGet('due_date_from'),
+            'due_date_to' => $this->request->getGet('due_date_to'),
+            'due_date_overdue' => $this->request->getGet('due_date_overdue'),
+            'search' => $this->request->getGet('search'),
+        ];
+
+        // Remove empty filters
+        $filters = array_filter($filters, function($value) {
+            return $value !== null && $value !== '';
+        });
+
+        // Get saved filters for user
+        $savedFilters = $this->savedFilterService->getSavedFilters($userId, $projectId);
+
+        // Get issues with filters
+        if (!empty($filters)) {
+            $issues = $this->issueService->getFilteredIssues($filters, $userId);
+        } else {
+            // Check for default filter
+            $defaultFilter = $this->savedFilterService->getDefaultFilter($userId, $projectId);
+            if ($defaultFilter && !empty($defaultFilter['filter_data'])) {
+                $filters = array_merge($defaultFilter['filter_data'], ['project_id' => $projectId]);
+                $filters = array_filter($filters, function($value) {
+                    return $value !== null && $value !== '';
+                });
+                $issues = $this->issueService->getFilteredIssues($filters, $userId);
+            } else {
+                // No filters, get all issues
+                $issues = $projectId 
+                    ? $this->issueService->getIssuesByProject((int)$projectId)
+                    : $this->issueService->getIssuesForUser($userId);
+            }
+        }
+
+        // Get data for filter dropdowns
+        $columns = [];
+        $labels = [];
+        $projectUsers = [];
+        
+        if ($projectId) {
+            $db = \Config\Database::connect();
+            $boards = $db->table('boards')
+                ->where('project_id', $projectId)
+                ->get()
+                ->getResultArray();
+            
+            if (!empty($boards)) {
+                $boardIds = array_column($boards, 'id');
+                $columns = $db->table('columns')
+                    ->whereIn('board_id', $boardIds)
+                    ->orderBy('position', 'ASC')
+                    ->get()
+                    ->getResultArray();
+            }
+            
+            $labels = $this->labelService->getLabelsByProject((int)$projectId);
+            $projectUsers = $this->projectService->getProjectUsers((int)$projectId);
+        }
         
         return view('issues/index', [
             'issues' => $issues,
-            'projectId' => $projectId
+            'projectId' => $projectId,
+            'filters' => $filters,
+            'savedFilters' => $savedFilters,
+            'columns' => $columns,
+            'labels' => $labels,
+            'projectUsers' => $projectUsers
         ]);
     }
 
@@ -380,6 +451,122 @@ class IssueController extends BaseController
 
             return redirect()->back()
                 ->with('success', 'Issue assigned successfully');
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->with('error', $e->getMessage());
+        }
+    }
+
+    /**
+     * Save filter
+     * POST /issues/filters/save
+     */
+    public function saveFilter()
+    {
+        $rules = [
+            'name' => 'required|min_length[1]|max_length[100]',
+            'filter_data' => 'permit_empty',
+        ];
+
+        if (!$this->validate($rules)) {
+            return redirect()->back()
+                ->withInput()
+                ->with('errors', $this->validator->getErrors());
+        }
+
+        try {
+            $userId = session()->get('user_id');
+            $name = $this->request->getPost('name');
+            $projectId = $this->request->getPost('project_id') ? (int)$this->request->getPost('project_id') : null;
+            $isDefault = $this->request->getPost('is_default') ? true : false;
+
+            // Get filter data from form
+            $filterData = [
+                'column_id' => $this->request->getPost('column_id'),
+                'priority' => $this->request->getPost('priority'),
+                'assignee_id' => $this->request->getPost('assignee_id'),
+                'label_id' => $this->request->getPost('label_id'),
+                'issue_type' => $this->request->getPost('issue_type'),
+                'due_date_from' => $this->request->getPost('due_date_from'),
+                'due_date_to' => $this->request->getPost('due_date_to'),
+                'due_date_overdue' => $this->request->getPost('due_date_overdue'),
+                'search' => $this->request->getPost('search'),
+            ];
+
+            // Remove empty values
+            $filterData = array_filter($filterData, function($value) {
+                return $value !== null && $value !== '';
+            });
+
+            $this->savedFilterService->saveFilter($userId, $name, $filterData, $projectId, $isDefault);
+
+            return redirect()->back()
+                ->with('success', 'Filter saved successfully');
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', $e->getMessage());
+        }
+    }
+
+    /**
+     * Load saved filter
+     * GET /issues/filters/load/{id}
+     */
+    public function loadFilter($id)
+    {
+        try {
+            $userId = session()->get('user_id');
+            $filter = $this->savedFilterService->getSavedFilterById((int)$id, $userId);
+
+            if (!$filter) {
+                throw new \RuntimeException('Filter not found');
+            }
+
+            $filterData = $filter['filter_data'] ?? [];
+            $projectId = $filter['project_id'] ?? null;
+
+            // Build query string
+            $queryParams = [];
+            if ($projectId) {
+                $queryParams['project_id'] = $projectId;
+            }
+            foreach ($filterData as $key => $value) {
+                if ($value !== null && $value !== '') {
+                    if (is_array($value)) {
+                        foreach ($value as $v) {
+                            $queryParams[$key . '[]'] = $v;
+                        }
+                    } else {
+                        $queryParams[$key] = $value;
+                    }
+                }
+            }
+
+            $url = '/issues';
+            if (!empty($queryParams)) {
+                $url .= '?' . http_build_query($queryParams);
+            }
+
+            return redirect()->to($url);
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->with('error', $e->getMessage());
+        }
+    }
+
+    /**
+     * Delete saved filter
+     * POST /issues/filters/delete/{id}
+     */
+    public function deleteFilter($id)
+    {
+        try {
+            $userId = session()->get('user_id');
+            $this->savedFilterService->deleteFilter((int)$id, $userId);
+
+            return redirect()->back()
+                ->with('success', 'Filter deleted successfully');
         } catch (\Exception $e) {
             return redirect()->back()
                 ->with('error', $e->getMessage());

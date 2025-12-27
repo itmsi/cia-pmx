@@ -5,10 +5,15 @@ use CodeIgniter\Router\RouteCollection;
 /**
  * @var RouteCollection $routes
  */
-// Redirect root to projects (which requires auth)
-$routes->get('/', 'ProjectController::index', ['filter' => 'auth']);
+// Redirect root to dashboard (which requires auth)
+$routes->get('/', 'DashboardController::index', ['filter' => 'auth']);
 
 $routes->group('', ['filter' => 'auth'], function($routes) {
+    
+    // ========================================
+    // DASHBOARD
+    // ========================================
+    $routes->get('dashboard', 'DashboardController::index');
     
     // ========================================
     // MASTER DATA - Users, Roles & Permissions
@@ -21,6 +26,7 @@ $routes->group('', ['filter' => 'auth'], function($routes) {
         $routes->get('(:num)/edit', 'UserController::edit/$1');
         $routes->post('(:num)', 'UserController::update/$1');
         $routes->post('(:num)/delete', 'UserController::delete/$1');
+        $routes->post('(:num)/force-logout', 'UserController::forceLogout/$1');
     });
 
     $routes->group('roles', function($routes) {
@@ -74,6 +80,23 @@ $routes->group('', ['filter' => 'auth'], function($routes) {
     });
 
     // ========================================
+    // SPRINTS
+    // ========================================
+    $routes->group('sprints', function($routes) {
+        $routes->get('/', 'SprintController::index');
+        $routes->get('create', 'SprintController::create');
+        $routes->post('/', 'SprintController::store');
+        $routes->get('(:num)', 'SprintController::show/$1');
+        $routes->get('(:num)/edit', 'SprintController::edit/$1');
+        $routes->post('(:num)', 'SprintController::update/$1');
+        $routes->post('(:num)/delete', 'SprintController::delete/$1');
+        $routes->post('(:num)/start', 'SprintController::start/$1');
+        $routes->post('(:num)/complete', 'SprintController::complete/$1');
+        $routes->post('(:num)/issues', 'SprintController::addIssue/$1');
+        $routes->post('(:num)/issues/(:num)/remove', 'SprintController::removeIssue/$1/$2');
+    });
+
+    // ========================================
     // ISSUES / TASKS
     // ========================================
     $routes->group('issues', function($routes) {
@@ -86,6 +109,11 @@ $routes->group('', ['filter' => 'auth'], function($routes) {
         $routes->post('(:num)/delete', 'IssueController::delete/$1');
         $routes->post('(:num)/move', 'IssueController::move/$1');
         $routes->post('(:num)/assign', 'IssueController::assign/$1');
+        
+        // Saved filters
+        $routes->post('filters/save', 'IssueController::saveFilter');
+        $routes->get('filters/load/(:num)', 'IssueController::loadFilter/$1');
+        $routes->post('filters/delete/(:num)', 'IssueController::deleteFilter/$1');
     });
 
     // ========================================
@@ -115,8 +143,37 @@ $routes->group('', ['filter' => 'auth'], function($routes) {
     $routes->group('attachments', function($routes) {
         $routes->post('/', 'AttachmentController::store');
         $routes->get('(:num)/download', 'AttachmentController::download/$1');
+        $routes->get('(:num)/preview', 'AttachmentController::preview/$1');
         $routes->post('(:num)/delete', 'AttachmentController::delete/$1');
         $routes->get('issue/(:num)', 'AttachmentController::getByIssue/$1');
+    });
+
+    // ========================================
+    // WIKI
+    // ========================================
+    $routes->group('projects', function($routes) {
+        $routes->get('(:num)/wiki', 'WikiController::index/$1');
+        $routes->get('(:num)/wiki/create', 'WikiController::create/$1');
+        $routes->post('(:num)/wiki', 'WikiController::store/$1');
+        $routes->get('(:num)/wiki/(:any)', 'WikiController::show/$1/$2');
+        $routes->get('(:num)/wiki/(:num)/edit', 'WikiController::edit/$1/$2');
+        $routes->post('(:num)/wiki/(:num)', 'WikiController::update/$1/$2');
+        $routes->post('(:num)/wiki/(:num)/delete', 'WikiController::delete/$1/$2');
+        $routes->get('(:num)/wiki/(:num)/versions', 'WikiController::versions/$1/$2');
+        $routes->get('(:num)/wiki/(:num)/versions/(:num)', 'WikiController::showVersion/$1/$2/$3');
+        $routes->post('(:num)/wiki/(:num)/versions/(:num)/restore', 'WikiController::restoreVersion/$1/$2/$3');
+    });
+
+    // ========================================
+    // REPORTS
+    // ========================================
+    $routes->group('projects', function($routes) {
+        $routes->get('(:num)/reports', 'ReportController::index/$1');
+        $routes->get('(:num)/reports/velocity', 'ReportController::velocity/$1');
+        $routes->get('(:num)/reports/burndown/(:num)', 'ReportController::burndown/$1/$2');
+        $routes->get('(:num)/reports/burnup/(:num)', 'ReportController::burnup/$1/$2');
+        $routes->get('(:num)/reports/lead-time', 'ReportController::leadTime/$1');
+        $routes->get('(:num)/reports/productivity', 'ReportController::productivity/$1');
     });
 
     // ========================================

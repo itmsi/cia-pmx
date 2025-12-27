@@ -21,7 +21,9 @@ class UserModel extends Model
         'role_id',
         'full_name',
         'photo',
-        'phone'
+        'phone',
+        'force_logout_at',
+        'last_login_at'
     ];
     
     protected array $casts = [

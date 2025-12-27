@@ -5,16 +5,19 @@ namespace App\Controllers;
 use App\Controllers\BaseController;
 use App\Services\UserService;
 use App\Services\RoleService;
+use App\Services\AuthService;
 
 class UserController extends BaseController
 {
     protected UserService $userService;
     protected RoleService $roleService;
+    protected AuthService $authService;
 
     public function __construct()
     {
         $this->userService = new UserService();
         $this->roleService = new RoleService();
+        $this->authService = new AuthService();
     }
 
     /**
@@ -209,6 +212,37 @@ class UserController extends BaseController
             
             return redirect()->to('/users')
                 ->with('success', 'User deleted successfully');
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->with('error', $e->getMessage());
+        }
+    }
+
+    /**
+     * Force logout user
+     * POST /users/{id}/force-logout
+     */
+    public function forceLogout($id)
+    {
+        try {
+            $user = $this->userService->getUserById((int)$id);
+            
+            if (!$user) {
+                throw new \CodeIgniter\Exceptions\PageNotFoundException('User not found');
+            }
+
+            // Prevent self force logout
+            $currentUserId = session()->get('user_id');
+            if ($currentUserId == $id) {
+                return redirect()->back()
+                    ->with('error', 'You cannot force logout yourself. Please use the logout button instead.');
+            }
+
+            $forcedByUserId = session()->get('user_id');
+            $this->authService->forceLogout((int)$id, $forcedByUserId);
+            
+            return redirect()->back()
+                ->with('success', 'User has been force logged out. Their session will be terminated on next request.');
         } catch (\Exception $e) {
             return redirect()->back()
                 ->with('error', $e->getMessage());

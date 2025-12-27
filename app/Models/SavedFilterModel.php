@@ -4,43 +4,30 @@ namespace App\Models;
 
 use CodeIgniter\Model;
 
-class IssueModel extends Model
+class SavedFilterModel extends Model
 {
-    protected $table            = 'issues';
+    protected $table            = 'saved_filters';
     protected $primaryKey       = 'id';
     protected $useAutoIncrement = true;
     protected $returnType       = 'array';
     protected $useSoftDeletes   = false;
     protected $protectFields    = true;
     protected $allowedFields    = [
+        'user_id',
         'project_id',
-        'sprint_id',
-        'issue_key',
-        'column_id',
-        'issue_type',
-        'priority',
-        'title',
-        'description',
-        'assignee_id',
-        'reporter_id',
-        'due_date',
-        'estimation',
-        'parent_issue_id',
-        'position'
+        'name',
+        'filter_data',
+        'is_default'
     ];
 
     protected bool $allowEmptyInserts = false;
     protected bool $updateOnlyChanged = true;
 
     protected array $casts = [
-        'due_date' => 'date',
-        'estimation' => 'float',
-        'parent_issue_id' => 'int',
-        'assignee_id' => 'int',
-        'reporter_id' => 'int',
+        'user_id' => 'int',
         'project_id' => 'int',
-        'sprint_id' => 'int',
-        'column_id' => 'int'
+        'is_default' => 'bool',
+        'filter_data' => 'json-array'
     ];
     protected array $castHandlers = [];
 
@@ -52,7 +39,11 @@ class IssueModel extends Model
     protected $deletedField  = 'deleted_at';
 
     // Validation
-    protected $validationRules      = [];
+    protected $validationRules      = [
+        'user_id' => 'required|integer',
+        'name' => 'required|min_length[1]|max_length[100]',
+        'filter_data' => 'permit_empty',
+    ];
     protected $validationMessages   = [];
     protected $skipValidation       = false;
     protected $cleanValidationRules = true;
@@ -68,3 +59,4 @@ class IssueModel extends Model
     protected $beforeDelete   = [];
     protected $afterDelete    = [];
 }
+

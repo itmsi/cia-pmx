@@ -29,7 +29,18 @@ class AuthFilter implements FilterInterface
         if (! session()->get('logged_in')) {
             return redirect()->to('/login');
         }
-        
+
+        // Check if user should be force logged out
+        $userId = session()->get('user_id');
+        if ($userId) {
+            $authService = new \App\Services\AuthService();
+            if ($authService->shouldForceLogout($userId)) {
+                // Force logout the user
+                $authService->logout();
+                session()->setFlashdata('error', 'Your session has been terminated. Please login again.');
+                return redirect()->to('/login');
+            }
+        }
     }
 
     /**

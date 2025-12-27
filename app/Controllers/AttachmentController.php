@@ -128,6 +128,56 @@ class AttachmentController extends BaseController
     }
 
     /**
+     * Preview attachment (for images and PDFs)
+     * GET /attachments/{id}/preview
+     */
+    public function preview($id)
+    {
+        try {
+            $userId = session()->get('user_id');
+            $attachment = $this->attachmentService->getAttachmentById((int)$id);
+            
+            if (!$attachment) {
+                throw new \CodeIgniter\Exceptions\PageNotFoundException('Attachment not found');
+            }
+
+            // Check issue access
+            $issue = $this->issueService->getIssueById($attachment['issue_id']);
+            if (!$issue) {
+                throw new \RuntimeException('Issue not found');
+            }
+
+            if (!$this->projectService->userHasAccess($issue['project_id'], $userId)) {
+                throw new \RuntimeException('You do not have access to this attachment');
+            }
+
+            // Only allow preview for images and PDFs
+            $fileType = $attachment['file_type'] ?? 'other';
+            if (!in_array($fileType, ['image', 'pdf'])) {
+                throw new \RuntimeException('Preview not available for this file type');
+            }
+
+            $fileContent = $this->attachmentService->getFileContent((int)$id);
+            
+            if (!$fileContent || !file_exists($fileContent['path'])) {
+                throw new \RuntimeException('File not found');
+            }
+
+            // Set appropriate headers for preview
+            $mimeType = $attachment['mime_type'] ?? 'application/octet-stream';
+            
+            return $this->response
+                ->setHeader('Content-Type', $mimeType)
+                ->setHeader('Content-Disposition', 'inline; filename="' . $attachment['original_name'] . '"')
+                ->setBody(file_get_contents($fileContent['path']));
+        } catch (\Exception $e) {
+            return $this->response
+                ->setStatusCode(404)
+                ->setBody('File not found: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Get attachments for issue (AJAX)
      * GET /attachments/issue/{issueId}
      */

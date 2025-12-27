@@ -4,48 +4,35 @@ namespace App\Models;
 
 use CodeIgniter\Model;
 
-class IssueModel extends Model
+class WikiVersionModel extends Model
 {
-    protected $table            = 'issues';
+    protected $table            = 'wiki_versions';
     protected $primaryKey       = 'id';
     protected $useAutoIncrement = true;
     protected $returnType       = 'array';
     protected $useSoftDeletes   = false;
     protected $protectFields    = true;
     protected $allowedFields    = [
-        'project_id',
-        'sprint_id',
-        'issue_key',
-        'column_id',
-        'issue_type',
-        'priority',
+        'wiki_page_id',
+        'version_number',
         'title',
-        'description',
-        'assignee_id',
-        'reporter_id',
-        'due_date',
-        'estimation',
-        'parent_issue_id',
-        'position'
+        'content',
+        'created_by',
+        'change_summary'
     ];
 
     protected bool $allowEmptyInserts = false;
     protected bool $updateOnlyChanged = true;
 
     protected array $casts = [
-        'due_date' => 'date',
-        'estimation' => 'float',
-        'parent_issue_id' => 'int',
-        'assignee_id' => 'int',
-        'reporter_id' => 'int',
-        'project_id' => 'int',
-        'sprint_id' => 'int',
-        'column_id' => 'int'
+        'wiki_page_id' => 'int',
+        'version_number' => 'int',
+        'created_by' => 'int'
     ];
     protected array $castHandlers = [];
 
     // Dates
-    protected $useTimestamps = true;
+    protected $useTimestamps = false;
     protected $dateFormat    = 'datetime';
     protected $createdField  = 'created_at';
     protected $updatedField  = 'updated_at';

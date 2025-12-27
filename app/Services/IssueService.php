@@ -5,12 +5,14 @@ namespace App\Services;
 use App\Models\IssueModel;
 use App\Services\ActivityLogService;
 use App\Services\ProjectService;
+use App\Services\WorkflowService;
 
 class IssueService
 {
     protected IssueModel $issueModel;
     protected ActivityLogService $logService;
     protected ProjectService $projectService;
+    protected WorkflowService $workflowService;
     protected $db;
 
     public function __construct()
@@ -18,6 +20,7 @@ class IssueService
         $this->issueModel = new IssueModel();
         $this->logService = new ActivityLogService();
         $this->projectService = new ProjectService();
+        $this->workflowService = new WorkflowService();
         $this->db = \Config\Database::connect();
     }
 
@@ -130,23 +133,64 @@ class IssueService
     {
         $issue = $this->getIssueById($issueId);
         if (!$issue) {
-            return false;
+            throw new \RuntimeException('Issue not found');
         }
 
-        // Log status change if column changed
-        if ($issue['column_id'] != $targetColumnId) {
-            $this->logService->log(
-                'update',
-                'issue',
-                $issueId,
-                "Issue moved from column {$issue['column_id']} to {$targetColumnId}"
-            );
+        $fromColumnId = $issue['column_id'];
+        
+        // Check if column changed
+        if ($fromColumnId == $targetColumnId) {
+            // Only update position if same column
+            return $this->issueModel->update($issueId, [
+                'position' => $position
+            ]);
         }
 
-        return $this->issueModel->update($issueId, [
+        // Get board ID from issue's project
+        $boardId = null;
+        $board = $this->db->table('boards')
+            ->where('project_id', $issue['project_id'])
+            ->first();
+        if ($board) {
+            $boardId = $board->id;
+        }
+
+        // Validate workflow transition
+        $validation = $this->workflowService->canTransition(
+            $fromColumnId,
+            $targetColumnId,
+            $boardId,
+            $issueId
+        );
+
+        if (!$validation['allowed']) {
+            throw new \RuntimeException($validation['message'] ?? 'This transition is not allowed');
+        }
+
+        // Get column names for logging
+        $fromColumn = $this->db->table('columns')->where('id', $fromColumnId)->get()->getRowArray();
+        $toColumn = $this->db->table('columns')->where('id', $targetColumnId)->get()->getRowArray();
+        $fromColumnName = $fromColumn['name'] ?? "Column {$fromColumnId}";
+        $toColumnName = $toColumn['name'] ?? "Column {$targetColumnId}";
+
+        // Update issue
+        $result = $this->issueModel->update($issueId, [
             'column_id' => $targetColumnId,
             'position' => $position
         ]);
+
+        if ($result) {
+            // Log status change with detailed information
+            $this->logService->logStatusChange(
+                $issueId,
+                $fromColumnId,
+                $targetColumnId,
+                $fromColumnName,
+                $toColumnName
+            );
+        }
+
+        return $result;
     }
 
     /**
@@ -251,6 +295,131 @@ class IssueService
         $this->db->transComplete();
 
         return $this->db->transStatus();
+    }
+
+    /**
+     * Get filtered issues
+     * 
+     * @param array $filters Filter parameters:
+     *   - project_id: Filter by project
+     *   - column_id: Filter by status/column (can be array)
+     *   - priority: Filter by priority (can be array)
+     *   - assignee_id: Filter by assignee (can be array, null for unassigned)
+     *   - label_id: Filter by label (can be array)
+     *   - issue_type: Filter by issue type (can be array)
+     *   - due_date_from: Filter by due date from
+     *   - due_date_to: Filter by due date to
+     *   - due_date_overdue: Filter overdue issues (true/false)
+     *   - search: Search in title and description
+     * @param int|null $userId Optional user ID for access control
+     * @return array
+     */
+    public function getFilteredIssues(array $filters = [], ?int $userId = null): array
+    {
+        $builder = $this->db->table('issues')
+            ->select('issues.*, columns.name as column_name, users.full_name as assignee_name, users.email as assignee_email')
+            ->join('columns', 'columns.id = issues.column_id', 'left')
+            ->join('users', 'users.id = issues.assignee_id', 'left');
+
+        // Filter by project
+        if (!empty($filters['project_id'])) {
+            $builder->where('issues.project_id', (int)$filters['project_id']);
+        }
+
+        // Filter by status/column
+        if (!empty($filters['column_id'])) {
+            if (is_array($filters['column_id'])) {
+                $builder->whereIn('issues.column_id', $filters['column_id']);
+            } else {
+                $builder->where('issues.column_id', (int)$filters['column_id']);
+            }
+        }
+
+        // Filter by priority
+        if (!empty($filters['priority'])) {
+            if (is_array($filters['priority'])) {
+                $builder->whereIn('issues.priority', $filters['priority']);
+            } else {
+                $builder->where('issues.priority', $filters['priority']);
+            }
+        }
+
+        // Filter by assignee
+        if (isset($filters['assignee_id'])) {
+            if (is_array($filters['assignee_id'])) {
+                if (in_array(null, $filters['assignee_id'], true)) {
+                    // Include unassigned
+                    $builder->groupStart();
+                    $builder->whereIn('issues.assignee_id', array_filter($filters['assignee_id']));
+                    $builder->orWhere('issues.assignee_id IS NULL');
+                    $builder->groupEnd();
+                } else {
+                    $builder->whereIn('issues.assignee_id', $filters['assignee_id']);
+                }
+            } elseif ($filters['assignee_id'] === null || $filters['assignee_id'] === 'null') {
+                $builder->where('issues.assignee_id IS NULL');
+            } else {
+                $builder->where('issues.assignee_id', (int)$filters['assignee_id']);
+            }
+        }
+
+        // Filter by label
+        if (!empty($filters['label_id'])) {
+            $labelIds = is_array($filters['label_id']) ? $filters['label_id'] : [(int)$filters['label_id']];
+            $builder->join('issue_labels', 'issue_labels.issue_id = issues.id', 'inner')
+                ->whereIn('issue_labels.label_id', $labelIds)
+                ->groupBy('issues.id');
+        }
+
+        // Filter by issue type
+        if (!empty($filters['issue_type'])) {
+            if (is_array($filters['issue_type'])) {
+                $builder->whereIn('issues.issue_type', $filters['issue_type']);
+            } else {
+                $builder->where('issues.issue_type', $filters['issue_type']);
+            }
+        }
+
+        // Filter by due date range
+        if (!empty($filters['due_date_from'])) {
+            $builder->where('issues.due_date >=', $filters['due_date_from']);
+        }
+        if (!empty($filters['due_date_to'])) {
+            $builder->where('issues.due_date <=', $filters['due_date_to']);
+        }
+
+        // Filter overdue issues
+        if (!empty($filters['due_date_overdue'])) {
+            $builder->where('issues.due_date <', date('Y-m-d'))
+                ->where('issues.due_date IS NOT NULL', null, false);
+        }
+
+        // Search in title and description
+        if (!empty($filters['search'])) {
+            $search = $filters['search'];
+            $builder->groupStart()
+                ->like('issues.title', $search)
+                ->orLike('issues.description', $search)
+                ->orLike('issues.issue_key', $search)
+                ->groupEnd();
+        }
+
+        // Access control - only show issues from projects user has access to
+        if ($userId) {
+            $projectIds = $this->projectService->getProjectsForUser($userId);
+            $projectIds = array_column($projectIds, 'id');
+            if (!empty($projectIds)) {
+                $builder->whereIn('issues.project_id', $projectIds);
+            } else {
+                // User has no projects, return empty
+                return [];
+            }
+        }
+
+        return $builder->orderBy('issues.position', 'ASC')
+            ->orderBy('issues.created_at', 'DESC')
+            ->get()
+            ->getResultArray();
     }
 }
 

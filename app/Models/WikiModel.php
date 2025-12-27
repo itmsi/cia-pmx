@@ -4,9 +4,9 @@ namespace App\Models;
 
 use CodeIgniter\Model;
 
-class IssueModel extends Model
+class WikiModel extends Model
 {
-    protected $table            = 'issues';
+    protected $table            = 'wiki_pages';
     protected $primaryKey       = 'id';
     protected $useAutoIncrement = true;
     protected $returnType       = 'array';
@@ -14,33 +14,22 @@ class IssueModel extends Model
     protected $protectFields    = true;
     protected $allowedFields    = [
         'project_id',
-        'sprint_id',
-        'issue_key',
-        'column_id',
-        'issue_type',
-        'priority',
         'title',
-        'description',
-        'assignee_id',
-        'reporter_id',
-        'due_date',
-        'estimation',
-        'parent_issue_id',
-        'position'
+        'slug',
+        'content',
+        'created_by',
+        'updated_by',
+        'is_published'
     ];
 
     protected bool $allowEmptyInserts = false;
     protected bool $updateOnlyChanged = true;
 
     protected array $casts = [
-        'due_date' => 'date',
-        'estimation' => 'float',
-        'parent_issue_id' => 'int',
-        'assignee_id' => 'int',
-        'reporter_id' => 'int',
         'project_id' => 'int',
-        'sprint_id' => 'int',
-        'column_id' => 'int'
+        'created_by' => 'int',
+        'updated_by' => 'int',
+        'is_published' => 'boolean'
     ];
     protected array $castHandlers = [];
 

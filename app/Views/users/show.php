@@ -12,6 +12,14 @@
             <a href="/users/<?= $user['id'] ?>/edit" class="btn btn-primary">
                 <i class="fas fa-edit"></i> Edit User
             </a>
+            <?php if ($user['id'] != session()->get('user_id')): ?>
+            <form method="post" action="/users/<?= $user['id'] ?>/force-logout" style="display: inline;" onsubmit="return confirm('Are you sure you want to force logout this user? They will be logged out on their next request.')">
+                <?= csrf_field() ?>
+                <button type="submit" class="btn btn-outline" style="color: #f57c00; border-color: #f57c00;">
+                    <i class="fas fa-sign-out-alt"></i> Force Logout
+                </button>
+            </form>
+            <?php endif; ?>
             <a href="/users" class="btn btn-outline">
                 <i class="fas fa-arrow-left"></i> Back
             </a>

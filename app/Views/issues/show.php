@@ -101,6 +101,141 @@
                 </div>
             <?php endif; ?>
 
+            <!-- Attachments Section -->
+            <div class="card" style="background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 30px; margin-bottom: 20px;">
+                <h3 style="margin-top: 0; color: #2c3e50; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; margin-bottom: 20px;">
+                    Attachments (<?= count($attachments ?? []) ?>)
+                </h3>
+
+                <!-- Upload File Form -->
+                <form method="post" action="/attachments" enctype="multipart/form-data" style="margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #e0e0e0;">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="issue_id" value="<?= $issue['id'] ?>">
+                    <div style="margin-bottom: 12px;">
+                        <input 
+                            type="file" 
+                            name="file" 
+                            required
+                            style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; font-family: inherit;"
+                            accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv"
+                        >
+                        <small style="color: #666; display: block; margin-top: 4px;">
+                            Maximum file size: 10MB. Supported: Images, PDF, Documents
+                        </small>
+                    </div>
+                    <div style="margin-bottom: 12px;">
+                        <input 
+                            type="text" 
+                            name="description" 
+                            placeholder="Optional description..."
+                            style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; font-family: inherit;"
+                        >
+                    </div>
+                    <div style="display: flex; justify-content: flex-end;">
+                        <button type="submit" class="btn btn-primary" style="padding: 8px 20px;">
+                            <i class="fas fa-upload"></i> Upload File
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Attachments List -->
+                <?php if (empty($attachments)): ?>
+                    <div style="text-align: center; padding: 30px; color: #666;">
+                        <i class="fas fa-paperclip" style="font-size: 36px; color: #ddd; margin-bottom: 10px;"></i>
+                        <p>No attachments yet. Upload a file to get started!</p>
+                    </div>
+                <?php else: ?>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px;">
+                        <?php foreach ($attachments as $attachment): ?>
+                            <div style="padding: 15px; background: #f8f9fa; border-radius: 6px; border: 1px solid #e0e0e0; position: relative;">
+                                <?php if ($attachment['file_type'] === 'image'): ?>
+                                    <!-- Image Preview -->
+                                    <div style="margin-bottom: 10px; text-align: center;">
+                                        <a href="/attachments/<?= $attachment['id'] ?>/preview" target="_blank" style="display: block;">
+                                            <img 
+                                                src="/attachments/<?= $attachment['id'] ?>/preview" 
+                                                alt="<?= esc($attachment['original_name']) ?>"
+                                                style="max-width: 100%; max-height: 150px; border-radius: 4px; object-fit: cover; cursor: pointer;"
+                                                onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'100\' height=\'100\'%3E%3Crect fill=\'%23ddd\' width=\'100\' height=\'100\'/%3E%3Ctext fill=\'%23999\' font-family=\'sans-serif\' font-size=\'14\' x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\'%3EImage%3C/text%3E%3C/svg%3E'"
+                                            >
+                                        </a>
+                                    </div>
+                                <?php elseif ($attachment['file_type'] === 'pdf'): ?>
+                                    <!-- PDF Icon -->
+                                    <div style="margin-bottom: 10px; text-align: center;">
+                                        <a href="/attachments/<?= $attachment['id'] ?>/preview" target="_blank" style="display: block; text-decoration: none; color: #d32f2f;">
+                                            <i class="fas fa-file-pdf" style="font-size: 48px;"></i>
+                                            <div style="font-size: 0.85rem; margin-top: 8px; color: #666;">Click to preview</div>
+                                        </a>
+                                    </div>
+                                <?php else: ?>
+                                    <!-- Document/Other File Icon -->
+                                    <div style="margin-bottom: 10px; text-align: center;">
+                                        <i class="fas fa-file" style="font-size: 48px; color: #666;"></i>
+                                    </div>
+                                <?php endif; ?>
+                                
+                                <!-- File Info -->
+                                <div style="margin-bottom: 8px;">
+                                    <div style="font-weight: 600; color: #2c3e50; font-size: 0.9rem; margin-bottom: 4px; word-break: break-word;">
+                                        <?= esc($attachment['original_name']) ?>
+                                    </div>
+                                    <?php if ($attachment['description']): ?>
+                                        <div style="font-size: 0.85rem; color: #666; margin-bottom: 4px;">
+                                            <?= esc($attachment['description']) ?>
+                                        </div>
+                                    <?php endif; ?>
+                                    <div style="font-size: 0.75rem; color: #999;">
+                                        <?= number_format($attachment['file_size'] / 1024, 2) ?> KB
+                                        <span style="margin-left: 8px;">
+                                            <?= date('M d, Y', strtotime($attachment['created_at'])) ?>
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <!-- Actions -->
+                                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                    <a 
+                                        href="/attachments/<?= $attachment['id'] ?>/download" 
+                                        class="btn btn-outline" 
+                                        style="padding: 6px 12px; font-size: 0.85rem; flex: 1; text-align: center;"
+                                        title="Download"
+                                    >
+                                        <i class="fas fa-download"></i>
+                                    </a>
+                                    <?php if (in_array($attachment['file_type'], ['image', 'pdf'])): ?>
+                                        <a 
+                                            href="/attachments/<?= $attachment['id'] ?>/preview" 
+                                            target="_blank"
+                                            class="btn btn-outline" 
+                                            style="padding: 6px 12px; font-size: 0.85rem; flex: 1; text-align: center;"
+                                            title="Preview"
+                                        >
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    <?php endif; ?>
+                                    <form 
+                                        method="post" 
+                                        action="/attachments/<?= $attachment['id'] ?>/delete" 
+                                        style="display: inline; flex: 1;"
+                                        onsubmit="return confirm('Delete this attachment?')"
+                                    >
+                                        <?= csrf_field() ?>
+                                        <button 
+                                            type="submit" 
+                                            style="width: 100%; padding: 6px 12px; font-size: 0.85rem; background: #fff; border: 1px solid #ddd; border-radius: 4px; color: #d32f2f; cursor: pointer;"
+                                            title="Delete"
+                                        >
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+
             <!-- Comments Section -->
             <div class="card" style="background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 30px;">
                 <h3 style="margin-top: 0; color: #2c3e50; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; margin-bottom: 20px;">
